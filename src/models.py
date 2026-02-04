@@ -1,9 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Boolean, ForeignKey,Column,Table
-from sqlalchemy.orm import Mapped, mapped_column,relationship
+from sqlalchemy import String, Boolean, ForeignKey, Column, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 db = SQLAlchemy()
 
+# -------------------------
+# TABLA INTERMEDIA FOLLOWERS
+# -------------------------
 follower_table = Table(
     "followers",
     db.Model.metadata,
@@ -16,80 +19,90 @@ class User(db.Model):
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False)
-    comentarios: Mapped[list["Comment"]]= relationship()
-    post:Mapped [list["Post"]]= relationship()
-    follower: Mapped[list["Follower"]]=relationship(
-        "Follower",
-        secondary=follower_table,
-        back_populates= "followers"
+
+    comentarios: Mapped[list["Comment"]] = relationship(
+        back_populates="user"
     )
 
+    posts: Mapped[list["Post"]] = relationship(
+        back_populates="user"
+    )
 
+    followers: Mapped[list["Follower"]] = relationship(
+        secondary=follower_table,
+        back_populates="users"
+    )
 
     def serialize(self):
         return {
             "id": self.id,
-            "email": self.email,
-            # do not serialize the password, its a security breach
+            "email": self.email
         }
 
-class Post (db.Model):
-    id:Mapped[int]=mapped_column(primary_key=True)
-    comentarios:Mapped [list["Comment"]]= relationship()
-    medias: Mapped[list["Media"]] = relationship()
-    user_id: Mapped [int]= mapped_column(ForeignKey("user.id"))
-    user: Mapped [User] = relationship(back_populates="post")
 
-
-
-
-    
-    def serialize(self):
-        return{
-            "id":self.id,
-        }
-    
-
-
-class Comment (db.Model):
-     id: Mapped[int] = mapped_column(primary_key=True)
-     comment_text: Mapped[str] = mapped_column(String(120),)
-     user_id: Mapped [int]= mapped_column(ForeignKey("user.id"))
-     user: Mapped [User] = relationship(back_populates="comentarios") 
-     post_id: Mapped[str]= mapped_column(ForeignKey("post.id"))
-     post: Mapped[Post] = relationship (back_populates="comentarios")
-
-
-
-     def serializa(self):
-         return{
-             "id":self.id,
-             "comment":self.comment_text
-         }
-     
-class Media (db.Model):
+class Post(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    url: Mapped[str] = mapped_column(String(120), unique=True,)
-    post_id: Mapped[int]= mapped_column(ForeignKey("post.id"))
-    post: Mapped[Post] = relationship (back_populates="medias")
 
-
-    def serialize(self):
-        return{
-            "id":self.id,
-            "url":self.url
-            
-        }
-
-class Follower (db.Model): 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    followers:Mapped[list[User]]=relationship(
-        "User",
-        secondary=follower_table,
-        back_populates="follower"
-        
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    user: Mapped["User"] = relationship(
+        back_populates="posts"
     )
 
+    comentarios: Mapped[list["Comment"]] = relationship(
+        back_populates="post"
+    )
+
+    medias: Mapped[list["Media"]] = relationship(
+        back_populates="post"
+    )
+
+    def serialize(self):
+        return {
+            "id": self.id
+        }
 
 
+class Comment(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    comment_text: Mapped[str] = mapped_column(String(120), nullable=False)
 
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    user: Mapped["User"] = relationship(
+        back_populates="comentarios"
+    )
+
+    post_id: Mapped[int] = mapped_column(ForeignKey("post.id"))
+    post: Mapped["Post"] = relationship(
+        back_populates="comentarios"
+    )
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "comment": self.comment_text
+        }
+
+
+class Media(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+
+    post_id: Mapped[int] = mapped_column(ForeignKey("post.id"))
+    post: Mapped["Post"] = relationship(
+        back_populates="medias"
+    )
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "url": self.url
+        }
+
+
+class Follower(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    users: Mapped[list["User"]] = relationship(
+        secondary=follower_table,
+        back_populates="followers"
+    )
