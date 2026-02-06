@@ -20,9 +20,10 @@ class User(db.Model):
     password: Mapped[str] = mapped_column(nullable=False)
     
 
-    comentarios: Mapped[list["Comment"]] = relationship()
+    comentarios: Mapped[list["Comment"]] = relationship(back_populates=("user"))
 
-    posts: Mapped[list["Post"]] = relationship()
+
+    post: Mapped[list["Post"]] = relationship(back_populates=("user"))
 
     followers: Mapped[list["User"]] = relationship(
         "User",
@@ -53,7 +54,7 @@ class Post(db.Model):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     user: Mapped["User"] = relationship(
-        back_populates="posts"
+        back_populates="post"
     )
 
     comentarios: Mapped[list["Comment"]] = relationship(
