@@ -10,27 +10,35 @@ db = SQLAlchemy()
 follower_table = Table(
     "followers",
     db.Model.metadata,
-    Column("user_id", ForeignKey("user.id"), primary_key=True),
-    Column("follower_id", ForeignKey("follower.id"), primary_key=True)
+    Column("following_id", ForeignKey("user.id"), primary_key=True),
+    Column("follower_id", ForeignKey("user.id"), primary_key=True)
 )
 
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False)
+    
 
-    comentarios: Mapped[list["Comment"]] = relationship(
-        back_populates="user"
-    )
+    comentarios: Mapped[list["Comment"]] = relationship()
 
-    posts: Mapped[list["Post"]] = relationship(
-        back_populates="user"
-    )
+    posts: Mapped[list["Post"]] = relationship()
 
-    followers: Mapped[list["Follower"]] = relationship(
+    followers: Mapped[list["User"]] = relationship(
+        "User",
         secondary=follower_table,
-        back_populates="users"
+        primaryjoin="follower_table.following_id == User.id",
+        secondaryjoin="follower_table.follower_id == User.id",
+        back_populates="following"
+    )
+
+    following: Mapped[list["User"]] = relationship(
+        "User",
+        secondary=follower_table,
+        primaryjoin="follower_table.follower_id == User.id",
+        secondaryjoin="follower_table.following_id == User.id",
+        back_populates="followers"
+
     )
 
     def serialize(self):
@@ -67,7 +75,7 @@ class Comment(db.Model):
     comment_text: Mapped[str] = mapped_column(String(120), nullable=False)
 
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         back_populates="comentarios"
     )
 
@@ -99,10 +107,3 @@ class Media(db.Model):
         }
 
 
-class Follower(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-
-    users: Mapped[list["User"]] = relationship(
-        secondary=follower_table,
-        back_populates="followers"
-    )
